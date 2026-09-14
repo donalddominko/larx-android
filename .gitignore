@@ -1,0 +1,26 @@
+.gradle/
+build/
+.tmp/
+local.properties
+.idea/
+*.iml
+captures/
+.cxx/
+
+# Secrets & signing — NEVER commit
+keystore/*
+!keystore/signing.properties.example
+.env
+*.jks
+*.keystore
+signing.properties
+
+# Kotlin compiler daemon session files
+.kotlin/
+
+# whisper model weights (142MB; fetched via tools / -PmodelSrc, not committed)
+core/transcribe/src/androidTest/assets/ggml-base.bin
+whisper_base_assets/src/main/assets/ggml-base.bin
+
+# Optional companion transcription-server project, if checked out here
+scribe/

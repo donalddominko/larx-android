@@ -1,0 +1,8 @@
+# whisper.cpp — on-device transcription engine.
+# Pinned to the v1.7.4 release commit (recorded as the submodule gitlink).
+# Clone with:  git clone --recurse-submodules <repo-url>
+# Or, after cloning:  git submodule update --init --recursive
+[submodule "core/transcribe/src/main/cpp/whisper.cpp"]
+	path = core/transcribe/src/main/cpp/whisper.cpp
+	url = https://github.com/ggml-org/whisper.cpp.git
+	branch = v1.7.4

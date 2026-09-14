@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Core capture -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <!-- Background transcription runs as a foreground WorkManager job (dataSync type). -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!--
+      NO INTERNET in the free-only v1 (Phase 10, Option A). v1 has no reachable
+      network-egress path of its own:
+        - Cloud ASR/LLM providers are NotConfigured* (throw, no socket), double-gated.
+        - The only real network code, WebDavSink, is unreachable: DevEntitlements
+          hard-codes Pro=off in release (BuildConfig.DEBUG=false), so SyncGate
+          fail-closes (NOT_ENTITLED) and SyncEngine returns Blocked BEFORE any
+          sink.put — zero bytes read, zero connections opened.
+      BUT the on-device MediaPipe embeddings lib (com.google.mediapipe:tasks-core,
+      used for semantic search) transitively bundles Google's datatransport CCT
+      telemetry (Firelog) + firebase-encoders, which DECLARE INTERNET and an upload
+      scheduler. We force it out so the shipping app *provably cannot* phone home —
+      an OS-level guarantee, the load-bearing backing for the Data Safety claim.
+      tools:node="remove" is required: a bare omission is merged back by the lib.
+      RE-ADD INTERNET (and drop these removes) when the sync/cloud fast-follow ships.
+    -->
+    <uses-permission android:name="android.permission.INTERNET" tools:node="remove" />
+
+
+    <application
+        android:name=".EchoApp"
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Echo">
+
+        <!--
+          Strip Google datatransport/Firelog (CCT) telemetry components pulled in
+          transitively by com.google.mediapipe:tasks-core. Without INTERNET they
+          could not upload anyway, but removing the scheduler service + boot/alarm
+          receiver prevents them even initializing — defence in depth for the
+          "nothing leaves your device" guarantee. Reversible: drop these when the
+          cloud fast-follow re-introduces a legitimate egress path.
+        -->
+        <service
+            android:name="com.google.android.datatransport.runtime.backends.TransportBackendDiscovery"
+            tools:node="remove" />
+        <service
+            android:name="com.google.android.datatransport.runtime.scheduling.jobscheduling.JobInfoSchedulerService"
+            tools:node="remove" />
+        <receiver
+            android:name="com.google.android.datatransport.runtime.scheduling.jobscheduling.AlarmManagerSchedulerBroadcastReceiver"
+            tools:node="remove" />
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:theme="@style/Theme.Echo">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Recording foreground service: microphone type per Android 14 rules. -->
+        <service
+            android:name="london.aipartner.echo.core.capture.RecordingService"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
+
+        <!-- Transcription runs in WorkManager's foreground service; declare its dataSync type. -->
+        <service
+            android:name="androidx.work.impl.foreground.SystemForegroundService"
+            android:foregroundServiceType="dataSync"
+            tools:node="merge" />
+
+        <!-- Custom Configuration.Provider (HiltWorkerFactory) → remove the default WorkManager
+             initializer so our on-demand config is used. -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                tools:node="remove" />
+        </provider>
+
+    </application>
+</manifest>

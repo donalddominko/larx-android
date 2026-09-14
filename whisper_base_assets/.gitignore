@@ -1,0 +1,3 @@
+# The ~142 MB whisper base weights are provisioned at build time by the
+# `provisionModelAsset` task (from .tmp/ggml-base.bin or -PmodelSrc). NEVER commit it.
+/src/main/assets/*.bin

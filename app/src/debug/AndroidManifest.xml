@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  DEBUG-ONLY (src/debug source set). Merged ONLY into the debug build — never any
+  release. It (a) exports RecordingService so the code-free
+  `adb am start-foreground-service` Gate-B recipe can reach it, and (b) adds a
+  convenience launcher. Neither touches the gated capture path: ConsentGate still
+  runs and still DENYs without RECORD_AUDIO.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <application>
+        <!-- Export ONLY in debug so adb can start it; release stays exported=false. -->
+        <service
+            android:name="london.aipartner.echo.core.capture.RecordingService"
+            android:exported="true"
+            tools:replace="android:exported" />
+
+        <activity
+            android:name="london.aipartner.echo.debug.DebugRecordActivity"
+            android:exported="true"
+            android:label="Echo DEBUG trigger">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Bootstrap theme used before Compose takes over (manifest/launch). Dark window +
+         branded Android-12 splash (ink background + the Larx waveform mark) so launch is
+         on-brand with no white flash before the dark Compose UI renders. -->
+    <style name="Theme.Echo" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/ic_launcher_background</item>
+        <item name="android:windowSplashScreenBackground" tools:targetApi="s">@color/ic_launcher_background</item>
+        <!-- VECTOR splash icon (not the bitmap foreground): resolution-independent, so it stays
+             crisp when Android 12 scales it up into the 288dp splash icon (the bitmap fuzzed). -->
+        <item name="android:windowSplashScreenAnimatedIcon" tools:targetApi="s">@drawable/ic_splash_waveform</item>
+    </style>
+</resources>

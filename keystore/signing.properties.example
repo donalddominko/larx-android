@@ -1,0 +1,8 @@
+# Copy to keystore/signing.properties (gitignored) and fill in to enable a
+# signed release build. Generate the keystore with:
+#   keytool -genkeypair -v -keystore keystore/release.jks \
+#     -keyalg RSA -keysize 4096 -validity 10000 -alias larx
+storeFile=keystore/release.jks
+storePassword=CHANGEME
+keyAlias=larx
+keyPassword=CHANGEME

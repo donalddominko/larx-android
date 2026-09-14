@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Larx</string>
+
+    <!-- ============================================================
+         First-run disclosure (shown before first recording is possible).
+         This is a DISCLOSURE, not a consent contract — acknowledge only,
+         no checkbox, no "I agree". It does NOT unlock recording; the
+         RECORD_AUDIO permission prompt + ConsentGate do that.
+         ============================================================ -->
+    <string name="disclosure_firstrun_title">Before you record</string>
+    <string name="disclosure_firstrun_body_ondevice">Your recordings stay on this device. They never leave your phone — the app has no internet access at all.</string>
+    <string name="disclosure_firstrun_body_responsibility">When a recording captures other people, following the law where you are is your responsibility. Some places require everyone to agree before they\'re recorded. Your own notes and memos are your business; recording others is on you.</string>
+    <string name="disclosure_firstrun_retrieval">You can read this again anytime in Settings → About.</string>
+    <string name="disclosure_firstrun_acknowledge">Got it</string>
+
+    <!-- ============================================================
+         Settings → About restatement (findable, no button).
+         Same meaning as first-run, no retrieval line.
+         ============================================================ -->
+    <string name="about_privacy_title">How Larx handles your recordings</string>
+    <string name="about_privacy_body_ondevice">Your recordings stay on this device. The app has no internet access at all, so nothing can ever leave your phone.</string>
+    <string name="about_privacy_body_responsibility">When a recording captures other people, following the law where you are is your responsibility — in some places everyone must agree to being recorded.</string>
+
+    <!-- ============================================================
+         Settings surface (Phase 7). Plain language, honest resolved state.
+         ============================================================ -->
+    <string name="settings_title">Settings</string>
+
+    <!-- Group A — Transcription language (Layer 1: global default) -->
+    <string name="settings_group_language">Transcription language</string>
+    <string name="settings_language_row_title">Language</string>
+    <!-- Sub-line under the current language. Sets expectations honestly: this affects
+         new recordings only; nothing already transcribed is changed. -->
+    <string name="settings_language_row_subtitle">New recordings are transcribed in this language. Recordings you\'ve already made won\'t change.</string>
+    <string name="settings_language_picker_title">Transcription language</string>
+    <!-- Shown at the top of the picker so a confused user understands WHY they\'re here,
+         without jargon like "decode language" or "locale". -->
+    <string name="settings_language_picker_help">Pick the language you usually speak in your recordings. If a recording comes out as nonsense, it\'s often because it was spoken in a different language than this one.</string>
+    <string name="settings_language_picker_dismiss">Cancel</string>
+
+    <!-- Group B — Recording -->
+    <string name="settings_group_recording">Recording</string>
+    <!-- Mic-boost is NOT mirrored here (it lives on the record surface with the live meter).
+         A one-line honest pointer so a user looking for it isn\'t lost. -->
+    <string name="settings_micboost_pointer">Mic boost is on the recording screen, where you can watch the level move as you talk.</string>
+
+    <!-- Group C — Storage &amp; privacy -->
+    <string name="settings_group_storage">Storage &amp; privacy</string>
+    <!-- Read-only honest status line (NOT a dead toggle) — cloud sync isn\'t wired until
+         Phase 8. States the truth: everything is on-device right now. -->
+    <string name="settings_storage_status">Your recordings stay on this device. Nothing is ever sent anywhere — the app has no internet access.</string>
+    <string name="settings_about_row_title">How Larx handles your recordings</string>
+    <string name="settings_about_row_subtitle">Read the full privacy explanation.</string>
+
+    <string name="settings_back">Back</string>
+
+    <!-- ============================================================
+         Phase 8 — Cloud backup (egress turn-on + passphrase setup).
+         COPY IS A LOAD-BEARING DELIVERABLE. Honesty rules (settled):
+         say "backed up securely", NEVER "restore anywhere" / "access
+         on any device" (restore isn't built); state plainly that a
+         lost passphrase is UNRECOVERABLE, not even by us.
+         ============================================================ -->
+    <string name="settings_backup_group">Cloud backup</string>
+    <!-- The egress opt-in. Off by default; flipping it is what makes the storage line honest. -->
+    <string name="settings_egress_toggle_title">Back up recordings to the cloud</string>
+    <string name="settings_egress_toggle_subtitle">Off by default. When on, your recordings can be uploaded — encrypted so only you can open them — to a cloud destination you choose. Turn it off any time to stop future uploads.</string>
+    <!-- Honest status line once egress is on but no passphrase/destination yet. -->
+    <string name="settings_egress_on_needs_passphrase">Cloud backup is on. Set a backup passphrase to finish turning it on.</string>
+    <string name="settings_egress_on_ready">Cloud backup is on. Your recordings are backed up securely — encrypted with your passphrase before they leave this device.</string>
+
+    <!-- Passphrase row in Settings — re-findable entry point + status. -->
+    <string name="settings_passphrase_row_title">Backup passphrase</string>
+    <string name="settings_passphrase_row_set">Set a passphrase to encrypt your backup.</string>
+    <string name="settings_passphrase_row_configured">Set. Your backup is encrypted with your passphrase.</string>
+
+    <!-- ── The passphrase-setup screen ── -->
+    <string name="backup_setup_title">Backup passphrase</string>
+    <string name="backup_setup_intro">Your recordings are encrypted with a passphrase before they\'re backed up. Only you know it — Google and any server you use only ever see scrambled data.</string>
+    <string name="backup_setup_field_label">Passphrase</string>
+    <string name="backup_setup_confirm_label">Type it again</string>
+    <string name="backup_setup_show">Show passphrase</string>
+    <string name="backup_setup_hint">Use at least 10 characters. A few random words you\'ll remember work best.</string>
+
+    <!-- ★ The binding unrecoverable-warning copy. Reviewed on-device. -->
+    <string name="backup_setup_warning_title">If you lose this passphrase, your backup cannot be recovered — not even by us.</string>
+    <string name="backup_setup_warning_body">We never see your passphrase and never store it anywhere, so we can\'t reset it or unlock your backup for you. Write it down somewhere safe. If you forget it, your backed-up recordings are gone for good.</string>
+    <string name="backup_setup_ack_checkbox">I understand that losing my passphrase means losing my backup, permanently.</string>
+    <string name="backup_setup_save">Set passphrase</string>
+
+    <!-- Fail-closed strength-guard messages (map 1:1 to PassphraseStrength.RejectReason). -->
+    <string name="backup_error_empty">Enter a passphrase.</string>
+    <string name="backup_error_too_short">Too short — use at least 10 characters.</string>
+    <string name="backup_error_too_weak">Too easy to guess — choose something less common.</string>
+    <string name="backup_error_mismatch">The two entries don\'t match.</string>
+    <string name="backup_error_not_acknowledged">Please confirm you understand the passphrase can\'t be recovered.</string>
+    <string name="backup_setup_done">Passphrase set. Your backup is encrypted with it.</string>
+
+    <!-- ── The "already set" screen (re-findable warning lives here too) ── -->
+    <string name="backup_configured_status">Your backup passphrase is set. Your recordings are encrypted with it before they leave this device.</string>
+    <!-- Honest answer to "can I see it?" — no, because we never store it. -->
+    <string name="backup_configured_cannot_show">For your privacy, Larx never stores your passphrase — only a scrambled key on this device — so it can\'t be shown back to you here. If you\'ve forgotten it, you can set a new one below.</string>
+    <string name="backup_change">Change passphrase</string>
+
+    <!-- ============================================================
+         Transcript quality warning (post-decode MisdecodeGuard).
+         Generic + evidence-based: shown ABOVE the transcript when the
+         output shows mis-decode signals. Never names a language, never
+         references a tier (v1 is free-only). Direction A step 3, 2026-07-19.
+         ============================================================ -->
+    <string name="warn_unsupported_language_title">This might not be English</string>
+    <string name="warn_unsupported_language_body">This might not be English, so the transcript below may be inaccurate.</string>
+
+    <!-- ============================================================
+         Compact variant (sheet / snackbar-plus-link, if ever needed).
+         "Learn more" should link to Settings → About.
+         RESERVED — defined but intentionally unused at Phase 3.
+         ============================================================ -->
+    <string name="disclosure_compact">Recordings stay on your device. When you record others, the law is your responsibility.</string>
+    <string name="disclosure_compact_learn_more">Learn more</string>
+</resources>
