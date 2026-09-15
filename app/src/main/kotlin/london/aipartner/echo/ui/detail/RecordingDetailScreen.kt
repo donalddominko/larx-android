@@ -38,12 +38,31 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import android.content.ActivityNotFoundException
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.net.Uri
+import android.os.Build
+import android.provider.OpenableColumns
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import london.aipartner.echo.core.transcribe.ExportFormat
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -80,6 +99,50 @@ fun RecordingDetailRoute(
     // Pop back to the library the moment the delete-everywhere contract completes.
     LaunchedEffect(deleted) { if (deleted) onBack() }
 
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    // Write [format]'s rendering to the SAF-chosen [uri], off the main thread. NOTHING here
+    // touches the network — a purely local content-resolver write. No storage permission needed;
+    // SAF grants write to exactly the one document the user picked.
+    fun writeTranscript(uri: Uri, format: ExportFormat) {
+        scope.launch {
+            val content = viewModel.exportContent(format)
+            val ok = withContext(Dispatchers.IO) {
+                runCatching {
+                    context.contentResolver.openOutputStream(uri)?.use { out ->
+                        out.write(content.toByteArray(Charsets.UTF_8))
+                    } ?: error("no output stream")
+                }.isSuccess
+            }
+            if (ok) {
+                // NAME the saved file in the toast — SAF may write anywhere (often Download, not
+                // Documents), so telling the user WHAT was saved is how they find it. Prefer the
+                // Uri's real display name (reflects any OS de-dup like "name (1).md").
+                val name = withContext(Dispatchers.IO) { displayNameOf(context, uri) }
+                    ?: viewModel.suggestedFileName(format)
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.transcript_saved_named, name),
+                    Toast.LENGTH_LONG,
+                ).show()
+            } else {
+                Toast.makeText(context, R.string.transcript_save_failed, Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    // The txt launcher also serves the .md fallback: if a device's picker can't handle the
+    // text/markdown mime, we relaunch it as text/plain but still WRITE markdown content — so we
+    // remember which content to write here.
+    var txtPendingFormat by remember { mutableStateOf(ExportFormat.TXT) }
+    val txtLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/plain"),
+    ) { uri -> uri?.let { writeTranscript(it, txtPendingFormat) } }
+    val mdLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/markdown"),
+    ) { uri -> uri?.let { writeTranscript(it, ExportFormat.MARKDOWN) } }
+
     RecordingDetailScreen(
         state = state,
         positionMs = positionMs,
@@ -87,12 +150,36 @@ fun RecordingDetailRoute(
         isPlaying = isPlaying,
         playbackReady = ready,
         playbackFailed = playbackFailed,
+        transcriptExportable = state.transcriptExportable,
         onBack = onBack,
         onPlayPause = viewModel::playPause,
         onSeekToSegment = viewModel::seekToSegment,
         onSeekTo = viewModel::seekTo,
         onDelete = viewModel::delete,
         onRename = viewModel::rename,
+        onCopyTranscript = {
+            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            clipboard.setPrimaryClip(ClipData.newPlainText("Transcript", viewModel.copyText()))
+            // On API 33+ the OS shows its own "Copied" chip; a second toast would be redundant.
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+                Toast.makeText(context, R.string.transcript_copied, Toast.LENGTH_SHORT).show()
+            }
+        },
+        onSaveTxt = {
+            txtPendingFormat = ExportFormat.TXT
+            txtLauncher.launch(viewModel.suggestedFileName(ExportFormat.TXT))
+        },
+        onSaveMd = {
+            val name = viewModel.suggestedFileName(ExportFormat.MARKDOWN)
+            try {
+                mdLauncher.launch(name)
+            } catch (_: ActivityNotFoundException) {
+                // Picker rejects text/markdown — fall back to a text/plain picker with the .md
+                // filename, still writing markdown content.
+                txtPendingFormat = ExportFormat.MARKDOWN
+                txtLauncher.launch(name)
+            }
+        },
     )
 }
 
@@ -105,15 +192,20 @@ fun RecordingDetailScreen(
     isPlaying: Boolean,
     playbackReady: Boolean,
     playbackFailed: Boolean = false,
+    transcriptExportable: Boolean = false,
     onBack: () -> Unit,
     onPlayPause: () -> Unit,
     onSeekToSegment: (SegmentUi) -> Unit,
     onSeekTo: (Long) -> Unit,
     onDelete: () -> Unit,
     onRename: (String) -> Unit,
+    onCopyTranscript: () -> Unit = {},
+    onSaveTxt: () -> Unit = {},
+    onSaveMd: () -> Unit = {},
 ) {
     var confirmingDelete by remember { mutableStateOf(false) }
     var renaming by remember { mutableStateOf(false) }
+    var menuOpen by remember { mutableStateOf(false) }
 
     if (confirmingDelete) {
         DeleteConfirmDialog(
@@ -157,6 +249,29 @@ fun RecordingDetailScreen(
                         }
                         IconButton(onClick = { confirmingDelete = true }) {
                             Icon(Icons.Filled.Delete, contentDescription = "Delete recording")
+                        }
+                        // Overflow: transcript export. Items enabled only when a completed
+                        // transcript exists (DONE, including no-speech) — honest never to offer an
+                        // export of a pending/running/failed transcription.
+                        IconButton(onClick = { menuOpen = true }) {
+                            Icon(Icons.Filled.MoreVert, contentDescription = "More options")
+                        }
+                        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                            DropdownMenuItem(
+                                text = { Text("Copy transcript") },
+                                enabled = transcriptExportable,
+                                onClick = { menuOpen = false; onCopyTranscript() },
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Save as .txt") },
+                                enabled = transcriptExportable,
+                                onClick = { menuOpen = false; onSaveTxt() },
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Save as .md") },
+                                enabled = transcriptExportable,
+                                onClick = { menuOpen = false; onSaveMd() },
+                            )
                         }
                     }
                 },
@@ -558,6 +673,21 @@ private fun Section(heading: String, body: String) {
 /** How far INSIDE a tapped segment playback must be before the tap-pin yields to the position-
  *  derived highlight — absorbs MediaPlayer's post-seek position jitter (a few-ms dip below the
  *  segment's exact start would otherwise map to the previous segment and flash it). */
+/** The human-facing filename of a SAF document [uri] (its DISPLAY_NAME), or the last path
+ *  segment as a fallback, or null if neither can be read. Used only to name the save toast. */
+private fun displayNameOf(context: Context, uri: Uri): String? {
+    runCatching {
+        context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
+            ?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val idx = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                    if (idx >= 0) cursor.getString(idx)?.takeIf { it.isNotBlank() }?.let { return it }
+                }
+            }
+    }
+    return uri.lastPathSegment?.substringAfterLast('/')?.takeIf { it.isNotBlank() }
+}
+
 private const val PIN_RELEASE_EPSILON_MS = 280L
 
 private fun formatDate(epochMs: Long): String =

@@ -39,7 +39,7 @@ android {
         // AUTO — git-commit-count derived (see the top-of-file note). Monotonic, can't be forgotten.
         // versionName remains a manual human label — bump it when meaningful.
         versionCode = derivedVersionCode
-        versionName = "0.1.3"
+        versionName = "0.1.4"
         testInstrumentationRunner = "london.aipartner.echo.HiltTestRunner"
 
         // v1 is arm64-v8a ONLY (the Phase 4 native decision). whisper.cpp is built

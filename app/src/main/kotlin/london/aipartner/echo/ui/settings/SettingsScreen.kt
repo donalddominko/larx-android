@@ -37,6 +37,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import london.aipartner.echo.FeatureFlags
 import london.aipartner.echo.R
+import london.aipartner.echo.core.transcribe.ExportStyle
 import london.aipartner.echo.transcribe.LanguageOption
 
 /** Hilt entry point for the Settings destination. */
@@ -57,6 +58,7 @@ fun SettingsRoute(
     SettingsScreen(
         state = state,
         onLanguageSelected = viewModel::onLanguageSelected,
+        onExportStyleSelected = viewModel::onExportStyleSelected,
         onCloudBackupToggled = viewModel::onCloudBackupToggled,
         onOpenPassphrase = onOpenPassphrase,
         onAbout = onAbout,
@@ -69,12 +71,14 @@ fun SettingsRoute(
 fun SettingsScreen(
     state: SettingsUiState,
     onLanguageSelected: (String?) -> Unit,
+    onExportStyleSelected: (ExportStyle) -> Unit,
     onCloudBackupToggled: (Boolean) -> Unit,
     onOpenPassphrase: () -> Unit,
     onAbout: () -> Unit,
     onBack: () -> Unit,
 ) {
     var showLanguagePicker by remember { mutableStateOf(false) }
+    var showExportStylePicker by remember { mutableStateOf(false) }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -112,6 +116,17 @@ fun SettingsScreen(
                 value = state.selectedLanguage.label(),
                 subtitle = stringResource(R.string.settings_language_row_subtitle),
                 onClick = { showLanguagePicker = true },
+            )
+
+            SectionDivider()
+
+            // ── Group — Transcript export (style used by both Copy and Save) ──
+            SectionHeader(stringResource(R.string.settings_group_transcript))
+            SettingRow(
+                title = stringResource(R.string.settings_export_style_row_title),
+                value = stringResource(state.exportStyle.labelRes()),
+                subtitle = stringResource(R.string.settings_export_style_row_subtitle),
+                onClick = { showExportStylePicker = true },
             )
 
             SectionDivider()
@@ -179,6 +194,73 @@ fun SettingsScreen(
             onDismiss = { showLanguagePicker = false },
         )
     }
+
+    if (showExportStylePicker) {
+        ExportStylePickerDialog(
+            selected = state.exportStyle,
+            onSelect = {
+                onExportStyleSelected(it)
+                showExportStylePicker = false
+            },
+            onDismiss = { showExportStylePicker = false },
+        )
+    }
+}
+
+/** String label for an [ExportStyle], for the current row value. */
+private fun ExportStyle.labelRes(): Int = when (this) {
+    ExportStyle.TIMESTAMPED -> R.string.settings_export_style_timestamped
+    ExportStyle.PLAIN -> R.string.settings_export_style_plain
+}
+
+private fun ExportStyle.descRes(): Int = when (this) {
+    ExportStyle.TIMESTAMPED -> R.string.settings_export_style_timestamped_desc
+    ExportStyle.PLAIN -> R.string.settings_export_style_plain_desc
+}
+
+@Composable
+private fun ExportStylePickerDialog(
+    selected: ExportStyle,
+    onSelect: (ExportStyle) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.settings_export_style_picker_title)) },
+        text = {
+            Column(Modifier.selectableGroup()) {
+                ExportStyle.entries.forEach { style ->
+                    androidx.compose.foundation.layout.Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .selectable(
+                                selected = style == selected,
+                                role = Role.RadioButton,
+                                onClick = { onSelect(style) },
+                            )
+                            .padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.Top,
+                    ) {
+                        RadioButton(selected = style == selected, onClick = null)
+                        Column(modifier = Modifier.padding(start = 12.dp)) {
+                            Text(stringResource(style.labelRes()), style = MaterialTheme.typography.bodyLarge)
+                            Text(
+                                stringResource(style.descRes()),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.settings_export_style_picker_dismiss))
+            }
+        },
+    )
 }
 
 @Composable

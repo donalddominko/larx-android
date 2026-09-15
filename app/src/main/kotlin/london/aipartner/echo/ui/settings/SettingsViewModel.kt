@@ -9,8 +9,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import london.aipartner.echo.core.consent.ConsentPreferences
 import london.aipartner.echo.core.sync.backup.BackupKeyManager
+import london.aipartner.echo.core.transcribe.ExportStyle
 import london.aipartner.echo.transcribe.LanguageCatalog
 import london.aipartner.echo.transcribe.LanguageOption
+import london.aipartner.echo.transcribe.TranscriptExportPreferences
 import london.aipartner.echo.transcribe.TranscriptionPreferences
 
 data class SettingsUiState(
@@ -22,6 +24,8 @@ data class SettingsUiState(
     val cloudBackupOn: Boolean = false,
     /** Whether a backup passphrase has been set (its derived key cached). */
     val passphraseConfigured: Boolean = false,
+    /** The persisted transcript export style — used by both Copy and Save. */
+    val exportStyle: ExportStyle = ExportStyle.TIMESTAMPED,
 ) {
     /** The option currently selected — matched by tag, defaulting to Device default. */
     val selectedLanguage: LanguageOption
@@ -46,6 +50,7 @@ class SettingsViewModel @Inject constructor(
     private val transcriptionPreferences: TranscriptionPreferences,
     private val consentPreferences: ConsentPreferences,
     private val backupKeyManager: BackupKeyManager,
+    private val exportPreferences: TranscriptExportPreferences,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(snapshot())
@@ -55,6 +60,7 @@ class SettingsViewModel @Inject constructor(
         languageTagOverride = transcriptionPreferences.languageTagOverride,
         cloudBackupOn = consentPreferences.dataEgressAllowed,
         passphraseConfigured = backupKeyManager.isConfigured(),
+        exportStyle = exportPreferences.style,
     )
 
     /** Re-read persisted state — e.g. after returning from the passphrase-setup screen. */
@@ -67,6 +73,12 @@ class SettingsViewModel @Inject constructor(
         transcriptionPreferences.languageTagOverride = tag
         // Re-read through the pref so we reflect exactly what was persisted (blank → null).
         _state.update { it.copy(languageTagOverride = transcriptionPreferences.languageTagOverride) }
+    }
+
+    /** Set the transcript export style (Timestamped / Plain). Read by both Copy and Save. */
+    fun onExportStyleSelected(style: ExportStyle) {
+        exportPreferences.style = style
+        _state.update { it.copy(exportStyle = exportPreferences.style) }
     }
 
     /**

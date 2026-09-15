@@ -39,6 +39,26 @@
     <string name="settings_language_picker_help">Pick the language you usually speak in your recordings. If a recording comes out as nonsense, it\'s often because it was spoken in a different language than this one.</string>
     <string name="settings_language_picker_dismiss">Cancel</string>
 
+    <!-- Group — Transcript export (Copy / Save style). Read by both copy and save;
+         no per-action modal. -->
+    <string name="settings_group_transcript">Transcript</string>
+    <string name="settings_export_style_row_title">Export style</string>
+    <string name="settings_export_style_row_subtitle">How copied and saved transcripts are formatted.</string>
+    <string name="settings_export_style_picker_title">Export style</string>
+    <string name="settings_export_style_timestamped">Timestamped</string>
+    <string name="settings_export_style_timestamped_desc">Each line prefixed with its time, e.g. [01:23].</string>
+    <string name="settings_export_style_plain">Plain</string>
+    <string name="settings_export_style_plain_desc">No timestamps — flowing paragraphs.</string>
+    <string name="settings_export_style_picker_dismiss">Cancel</string>
+
+    <!-- Transcript copy/save feedback toasts. Copy toast shows only on Android < 13
+         (the OS shows its own copied chip on 13+). -->
+    <string name="transcript_copied">Transcript copied</string>
+    <!-- Success toast naming the saved file, so the user can find it (SAF often writes to
+         Download, not Documents). %1$s is the filename. -->
+    <string name="transcript_saved_named">Saved %1$s</string>
+    <string name="transcript_save_failed">Couldn\'t save the transcript</string>
+
     <!-- Group B — Recording -->
     <string name="settings_group_recording">Recording</string>
     <!-- Mic-boost is NOT mirrored here (it lives on the record surface with the live meter).

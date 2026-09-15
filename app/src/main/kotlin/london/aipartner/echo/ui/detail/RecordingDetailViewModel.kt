@@ -18,8 +18,15 @@ import london.aipartner.echo.core.capture.AudioEncryptor
 import london.aipartner.echo.core.data.AiArtifactDao
 import london.aipartner.echo.core.data.RecordingDao
 import london.aipartner.echo.core.data.TranscriptDao
+import london.aipartner.echo.core.transcribe.ExportFormat
+import london.aipartner.echo.core.transcribe.TranscriptExport
+import london.aipartner.echo.core.transcribe.TranscriptSegment
 import london.aipartner.echo.playback.PlaybackController
 import london.aipartner.echo.recordings.RecordingDeleter
+import london.aipartner.echo.transcribe.TranscriptExportPreferences
+import java.text.DateFormat
+import java.util.Date
+import java.util.concurrent.TimeUnit
 
 /** A single transcript line of the latest revision — the seam the karaoke player
  *  animates. Carries timings so the highlight is a pure function of position. */
@@ -49,7 +56,16 @@ data class RecordingDetailUiState(
     /** Transcription lifecycle (one of [london.aipartner.echo.core.data.TranscriptionStatus])
      *  so the screen honestly shows transcribing / failed vs an absent transcript. */
     val transcriptionStatus: String = london.aipartner.echo.core.data.TranscriptionStatus.PENDING.name,
-)
+) {
+    /**
+     * True once a completed transcript exists — DONE, INCLUDING the no-speech case (which is a
+     * legitimate finished result). This gates the Copy / Save menu items: honest to offer an
+     * export of a silent recording (it exports the honest "no speech" line), never of a pending,
+     * running, or failed one.
+     */
+    val transcriptExportable: Boolean
+        get() = transcriptionStatus == london.aipartner.echo.core.data.TranscriptionStatus.DONE.name
+}
 
 /**
  * Read-only detail over the encrypted DB **plus** the karaoke playback clock.
@@ -72,6 +88,7 @@ class RecordingDetailViewModel @Inject constructor(
     private val audioEncryptor: AudioEncryptor,
     private val recordingDeleter: RecordingDeleter,
     private val progressBus: london.aipartner.echo.transcribe.TranscriptionProgressBus,
+    private val exportPreferences: TranscriptExportPreferences,
 ) : ViewModel() {
 
     private val recordingId: String = checkNotNull(savedStateHandle["id"])
@@ -220,6 +237,35 @@ class RecordingDetailViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Render the current transcript for export in [format], using the persisted [ExportStyle].
+     * Pure text out — the caller (the screen) owns the Android side (clipboard / SAF write).
+     * The header title mirrors the screen's own precedence: manual/smart title, else date+time.
+     */
+    fun exportContent(format: ExportFormat): String {
+        val s = _state.value
+        val title = s.title ?: formatDateTime(s.createdAt)
+        val dateLine = "${formatDate(s.createdAt)} · ${formatDuration(s.durationMs)}"
+        return TranscriptExport.format(
+            recordingTitle = title,
+            dateLine = dateLine,
+            segments = s.segments.map { TranscriptSegment(it.text, it.tStartMs, it.tEndMs, it.speaker) },
+            style = exportPreferences.style,
+            format = format,
+        )
+    }
+
+    /** The clipboard text — ALWAYS the plain-text (TXT) rendering with the persisted style;
+     *  markdown syntax would be noise pasted into another app. */
+    fun copyText(): String = exportContent(ExportFormat.TXT)
+
+    /** The seed filename for the SAF save dialog for [format]. */
+    fun suggestedFileName(format: ExportFormat): String {
+        val s = _state.value
+        val title = s.title ?: formatDateTime(s.createdAt)
+        return TranscriptExport.suggestedFileName(title, format)
+    }
+
     fun playPause() = playback.playPause()
     fun seekToSegment(segment: SegmentUi) = playback.seekTo(segment.tStartMs)
     fun seekTo(ms: Long) = playback.seekTo(ms)
@@ -244,4 +290,15 @@ class RecordingDetailViewModel @Inject constructor(
         playback.dispose()
         super.onCleared()
     }
+}
+
+private fun formatDate(epochMs: Long): String =
+    DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(epochMs))
+
+private fun formatDateTime(epochMs: Long): String =
+    DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(epochMs))
+
+private fun formatDuration(durationMs: Long): String {
+    val totalSeconds = TimeUnit.MILLISECONDS.toSeconds(durationMs)
+    return "%d:%02d".format(totalSeconds / 60, totalSeconds % 60)
 }
